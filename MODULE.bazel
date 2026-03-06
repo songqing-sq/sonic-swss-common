@@ -1,0 +1,17 @@
+module(name = "sonic-swss-common", version = "1.0")
+
+bazel_dep(name = "rules_cc", version = "0.2.4")
+
+bazel_dep(name = "sonic_rules", version = "0.0.1")
+#git_override(
+#    module_name = "sonic_rules",
+#    remote = "https://github.com/songqing-sq/sonic_rules.git",
+#    commit = "b2a21478d331e5ae3ad0257dc4f25d928c7a9932",
+#)
+local_path_override(
+    module_name = "sonic_rules",
+    path = "../../sonic_rules"
+)
+
+bazel_dep(name = "googletest", version = "1.17.0.bcr.2")
+bazel_dep(name = "platforms", version = "1.0.0")
