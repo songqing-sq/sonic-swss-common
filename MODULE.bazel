@@ -45,7 +45,7 @@ apt.install(
         "libpcre2-dev:amd64",
         "libpcre2-dev:arm64",
     ],
-    suites = ["trixie", "trixie-updates"],
+    suites = ["trixie", "trixie-updates", "trixie-security"],
 )
 use_repo(apt, "swss_deps")
 
