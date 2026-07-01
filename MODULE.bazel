@@ -48,3 +48,41 @@ apt.install(
     suites = ["trixie", "trixie-updates", "trixie-security"],
 )
 use_repo(apt, "swss_deps")
+
+# --- Rust crate workspace ---
+# `crates/swss-common` and `crates/swss-common-testing` form a Cargo workspace
+# (see ./Cargo.toml). They provide the Rust FFI to libswsscommon via bindgen,
+# consumed downstream by sonic-supervisord-utilities-rs and (in son624) by
+# sonic-dash-ha. rules_rust toolchain is registered from the root MODULE.bazel;
+# libclang closure is provided by the local //bazel:extensions.bzl (see
+# rationale in that file's docstring — kept module-local until a second
+# bindgen consumer appears).
+bazel_dep(name = "rules_rust", version = "0.61.0")
+
+libclang = use_extension("//bazel:extensions.bzl", "libclang")
+use_repo(libclang, "swss_common_libclang")
+
+# Cargo.lock is committed alongside this MODULE.bazel; if it doesn't exist
+# yet, run `CARGO_BAZEL_REPIN=1 bazel build @sonic-swss-common//crates/...`
+# once and rules_rust will materialize it from the workspace Cargo.toml.
+crate = use_extension("@rules_rust//crate_universe:extension.bzl", "crate")
+crate.from_cargo(
+    name = "swss_common_crates",
+    cargo_lockfile = "//:Cargo.lock",
+    manifests = [
+        "//:Cargo.toml",
+        "//crates/swss-common:Cargo.toml",
+        "//crates/swss-common-testing:Cargo.toml",
+    ],
+)
+
+# NOTE on the `async` feature (Cargo.toml: `async = ["dep:tokio"]`):
+# supervisord-utilities-rs does NOT need it. We deliberately DON'T enable it
+# here — enabling it requires either (a) a workspace member that requests
+# `swss-common = { features = ["async"] }` to trigger Cargo's feature-
+# unification pass, or (b) crate.annotation on both swss-common AND tokio
+# (with net + rt features + its transitive deps). Since no current consumer
+# uses async, we keep it off. If sonic-dash-ha or similar async consumer is
+# migrated later, add a workspace consumer with features = ["async"] and
+# feature unification will handle it.
+use_repo(crate, "swss_common_crates")

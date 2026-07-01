@@ -33,9 +33,34 @@ fn main() {
     }
 
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap()).join("bindings.rs");
-    bindgen::builder()
+    let mut builder = bindgen::builder()
         .headers(&header_paths)
-        .derive_partialeq(true)
+        .derive_partialeq(true);
+
+    // Cross-compilation: pass --target and --sysroot to libclang.
+    // rules_rust sets TARGET/HOST and injects CC toolchain flags into CFLAGS.
+    if let (Ok(target), Ok(host)) = (env::var("TARGET"), env::var("HOST")) {
+        if target != host {
+            builder = builder.clang_arg(format!("--target={target}"));
+        }
+    }
+    if let Ok(cflags) = env::var("CFLAGS") {
+        let tokens: Vec<&str> = cflags.split_whitespace().collect();
+        let mut i = 0;
+        while i < tokens.len() {
+            let flag = tokens[i];
+            if flag.starts_with("--sysroot=") {
+                builder = builder.clang_arg(flag.to_string());
+            } else if (flag == "-isystem" || flag == "-idirafter") && i + 1 < tokens.len() {
+                builder = builder.clang_arg(flag.to_string());
+                builder = builder.clang_arg(tokens[i + 1].to_string());
+                i += 1;
+            }
+            i += 1;
+        }
+    }
+
+    builder
         .generate()
         .unwrap()
         .write_to_file(out_path)

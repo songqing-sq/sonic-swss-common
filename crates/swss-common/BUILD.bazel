@@ -1,0 +1,55 @@
+load("@rules_rust//cargo:defs.bzl", "cargo_build_script")
+load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@swss_common_crates//:defs.bzl", "aliases", "all_crate_deps")
+load("//bazel:libdir.bzl", "libclang_libdir")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["Cargo.toml"])
+
+# bindgen (run by build.rs via clang-sys) dlopen()s libclang.so at action time.
+# @swss_common_libclang (registered via //bazel:extensions.bzl in this
+# module's MODULE.bazel) provides a host-loadable libclang closure; stage it
+# into one directory so its $(execpath ...) is a usable search path.
+libclang_libdir(
+    name = "libclang_libs",
+    libs = "@swss_common_libclang//:libs",
+)
+
+# build.rs runs bindgen against the swsscommon C-API headers. The upstream
+# script reads $SWSS_COMMON_REPO and looks for $SWSS_COMMON_REPO/common/c-api/*.h.
+# We point it at this in-repo sonic-swss-common source via `data` so bindgen
+# can read the headers from the action sandbox; the path passed in
+# SWSS_COMMON_REPO points to the module root (three levels up from the
+# crate BUILD file: crates/swss-common/ → crates/ → .).
+cargo_build_script(
+    name = "swss_common_build_script",
+    srcs = ["build.rs"],
+    edition = "2021",
+    build_script_env = {
+        "SWSS_COMMON_REPO": "$${pwd}/external/sonic-swss-common+",
+        "LIBCLANG_PATH": "$(execpath :libclang_libs)",
+        "LD_LIBRARY_PATH": "$(execpath :libclang_libs)",
+    },
+    data = [
+        ":libclang_libs",
+        "@sonic-swss-common//:swsscommon_hdr_files",
+    ],
+    deps = all_crate_deps(build = True),
+)
+
+rust_library(
+    name = "swss_common",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "swss_common",
+    # NOTE: `async` feature (Cargo.toml: `async = ["dep:tokio"]`) intentionally
+    # off. supervisord-utilities-rs doesn't use it, and enabling it would
+    # require workspace feature-unification (see MODULE.bazel comment).
+    edition = "2021",
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(proc_macro = True),
+    deps = all_crate_deps() + [
+        ":swss_common_build_script",
+        "@sonic-swss-common//:swsscommon",
+    ],
+)

@@ -1,0 +1,18 @@
+load("@rules_rust//rust:defs.bzl", "rust_library")
+load("@swss_common_crates//:defs.bzl", "aliases", "all_crate_deps")
+
+package(default_visibility = ["//visibility:public"])
+
+exports_files(["Cargo.toml"])
+
+rust_library(
+    name = "swss_common_testing",
+    srcs = glob(["src/**/*.rs"]),
+    crate_name = "swss_common_testing",
+    edition = "2021",
+    aliases = aliases(),
+    proc_macro_deps = all_crate_deps(proc_macro = True),
+    deps = all_crate_deps() + [
+        "//crates/swss-common:swss_common",
+    ],
+)

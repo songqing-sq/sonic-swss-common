@@ -1,0 +1,6 @@
+licenses(["notice"])
+
+# The bazel/ directory ships module_extension + repo_rule + rule helpers for
+# the swss-common Rust crate's bindgen build script. It doesn't itself expose
+# Bazel targets. Empty BUILD.bazel marks it as a package so consumers can
+# load("@sonic-swss-common//bazel:libdir.bzl", ...).

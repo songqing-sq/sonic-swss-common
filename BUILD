@@ -9,6 +9,11 @@ load("@sonic_build_infra//swig:gen.bzl", "swig_gen")
 
 package(default_visibility = ["//visibility:public"])
 
+# Export the Cargo workspace manifest so sibling modules that consume the
+# swss-common Rust crate as a path-dep (e.g. sonic-supervisord-utilities-rs)
+# can reference it from their crate.from_cargo manifests list.
+exports_files(["Cargo.toml", "Cargo.lock"])
+
 # YANG-driven decorator tables. Build with `--//src/sonic-swss-common:enable_yangmodules=False`
 # to drop the 3 yang-dependent .cpp files; default keeps them.
 bool_flag(
