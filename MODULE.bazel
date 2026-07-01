@@ -1,0 +1,50 @@
+module(
+    name = "sonic-swss-common",
+    version = "1.0.0",
+)
+
+bazel_dep(name = "rules_cc", version = "0.2.16")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
+bazel_dep(name = "platforms", version = "1.1.0")
+bazel_dep(name = "sonic-build-infra", version = "0.0.0", repo_name = "sonic_build_infra")
+bazel_dep(name = "rules_distroless", version = "0.0.0", repo_name = "rules_deb")
+bazel_dep(name = "libnl3", version = "3.7.0")
+bazel_dep(name = "libyang3", version = "3.12.2")
+bazel_dep(name = "sonic-yang-models", version = "1.0")
+bazel_dep(name = "swig", version = "4.1.0")
+bazel_dep(name = "rules_python", version = "1.7.0")
+
+# Python toolchain: the root MODULE.bazel declares 3.13.4 as default (matching
+# trixie's system Python 3.13.5 ABI) plus 3.11.3 for legacy uv hubs. The SWIG-
+# generated _swsscommon.so links libpython3.13 via @rules_python//python/cc:current_py_cc_headers
+# (which resolves to the default 3.13 toolchain).
+
+# Build-time apt deps. libpython3.11-dev intentionally NOT here — trixie main
+# does not ship libpython3.11-dev (Debian moved on to 3.13). Python.h for the
+# SWIG-generated _swsscommon.so comes from rules_python's hermetic 3.11.3
+# toolchain via @rules_python//python/cc:current_py_cc_headers (same approach
+# as libyang3-py3).
+apt = use_extension("@rules_deb//apt:extensions.bzl", "apt")
+apt.install(
+    dependency_set = "swss_deps",
+    packages = [
+        "libboost-serialization1.83-dev:amd64",
+        "libboost-serialization1.83-dev:arm64",
+        "libhiredis-dev:amd64",
+        "libhiredis-dev:arm64",
+        "libzmq3-dev:amd64",
+        "libzmq3-dev:arm64",
+        "cppzmq-dev:amd64",
+        "cppzmq-dev:arm64",
+        "nlohmann-json3-dev:amd64",
+        "nlohmann-json3-dev:arm64",
+        "uuid-dev:amd64",
+        "uuid-dev:arm64",
+        # libpcre2-dev transitively via libyang's public tree_data.h
+        # (`#include <pcre2.h>`). Same workaround as libyang3-py3.
+        "libpcre2-dev:amd64",
+        "libpcre2-dev:arm64",
+    ],
+    suites = ["trixie", "trixie-updates", "trixie-security"],
+)
+use_repo(apt, "swss_deps")

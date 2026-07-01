@@ -66,3 +66,6 @@ sonic-db-cli/sonic-db-cli
 
 # Bazel Build System #
 /bazel-*
+
+# Generated header (BUILT_SOURCES; Bazel cfg_schema_h_gen genrule)
+common/cfg_schema.h
