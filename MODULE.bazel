@@ -52,8 +52,8 @@ use_repo(apt, "swss_deps")
 # --- Rust crate workspace ---
 # `crates/swss-common` and `crates/swss-common-testing` form a Cargo workspace
 # (see ./Cargo.toml). They provide the Rust FFI to libswsscommon via bindgen,
-# consumed downstream by sonic-supervisord-utilities-rs and (in son624) by
-# sonic-dash-ha. rules_rust toolchain is registered from the root MODULE.bazel;
+# consumed downstream by sonic-supervisord-utilities-rs and sonic-dash-ha.
+# rules_rust toolchain is registered from the root MODULE.bazel;
 # libclang closure is provided by the local //bazel:extensions.bzl (see
 # rationale in that file's docstring — kept module-local until a second
 # bindgen consumer appears).
