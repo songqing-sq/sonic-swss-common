@@ -14,6 +14,13 @@ package(default_visibility = ["//visibility:public"])
 # can reference it from their crate.from_cargo manifests list.
 exports_files(["Cargo.toml", "Cargo.lock"])
 
+# SWIG interface consumed by sonic-gnmi's swsscommon Go bindings. Make ships
+# this file via libswsscommon-dev.install to /usr/share/swss/swsscommon.i and
+# sonic-gnmi's Makefile copies it from there; exporting the tracked source
+# lets the Bazel side consume it directly (goext/swsscommon.i is
+# byte-identical, pyext is the one Make actually installs).
+exports_files(["pyext/swsscommon.i"])
+
 # YANG-driven decorator tables. Build with `--//src/sonic-swss-common:enable_yangmodules=False`
 # to drop the 3 yang-dependent .cpp files; default keeps them.
 bool_flag(
