@@ -309,6 +309,17 @@ swig_gen(
     interface = "pyext/swsscommon.i",
     cpp_out = "pyext/py3/swsscommon_wrap.cpp",
     python_out = "pyext/py3/swsscommon.py",
+    # Mirrors Makefile.am's `if YANGMODS: SWIG_FLAG += -DENABLE_YANG_MODULES`.
+    # swsscommon.i only `%include`s cfg_schema.h under this define, so without
+    # it NONE of the generated CFG_<TABLE>_TABLE_NAME constants reach Python and
+    # hostcfgd dies at startup with
+    #   AttributeError: module 'swsscommon.swsscommon' has no attribute
+    #   'CFG_DEVICE_METADATA_TABLE_NAME'
+    # which also takes down featured, aaastatsd and its other dependents.
+    defines = select({
+        ":yangmodules_enabled": ["ENABLE_YANG_MODULES"],
+        "//conditions:default": [],
+    }),
     wordsize64 = True,
     deps = [":swsscommon"],
 )
@@ -331,7 +342,14 @@ sonic_shared_library_versioned(
         "-std=c++17",
         "-fPIC",
         "-Wno-deprecated-declarations",
-    ],
+        # Mirrors Makefile.am's pyext_py3__swsscommon_la_CPPFLAGS. Must match
+        # the define used for codegen: configdb.h guards its yang default-value
+        # overloads on it, so the generated wrapper and the header would
+        # otherwise disagree about what is declared.
+    ] + select({
+        ":yangmodules_enabled": ["-DENABLE_YANG_MODULES"],
+        "//conditions:default": [],
+    }),
     linkopts = ["-Wl,-z,now"],
     dynamic_deps = [
         ":swsscommon_shared",
