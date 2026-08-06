@@ -1,0 +1,53 @@
+# Bazel-native `import swsscommon` package for py_test / py_binary consumers.
+#
+# Equivalent of what the Make side provides via `dpkg -i python3-swsscommon.deb`
+# into /usr/lib/python3/dist-packages/swsscommon/:
+#   __init__.py  swsscommon.py (SWIG)  _swsscommon.so (C extension)
+# plus the system ld.so search path resolving libswsscommon.so.0, libnl*.so,
+# libyang.so etc. In Bazel the .so closure travels in runfiles and the
+# generated __init__.py ctypes-preloads it (see py_native_library.bzl).
+#
+# Lives in its own subpackage: the root BUILD references pyext/py3/... source
+# paths as plain files, so a BUILD file cannot be placed under pyext/ without
+# breaking those labels.
+
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@sonic_build_infra//python:py_native_library.bzl", "py_native_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# SWIG python half of the binding (swsscommon.py). //:swsscommon_wrap_gen
+# emits the C++ wrapper and the .py in one action; pick the .py via the
+# rule's `python` output group.
+filegroup(
+    name = "swsscommon_py_gen",
+    srcs = ["//:swsscommon_wrap_gen"],
+    output_group = "python",
+)
+
+# Shared objects _swsscommon.so expects to resolve by SONAME at import time.
+# On the Make side these come from dpkg-installed libswsscommon / libnl3 /
+# libyang debs; here they are wrapped in a cc_library so py_native_library
+# sees them as dynamic libraries in CcInfo and preloads them from runfiles.
+cc_library(
+    name = "runtime_solibs",
+    srcs = [
+        "//:swsscommon_shared",
+        "@libnl3//:libnl_3_shared",
+        "@libnl3//:libnl_nf_3_shared",
+        "@libnl3//:libnl_route_3_shared",
+        "@libyang3//:yang_shared",
+    ],
+)
+
+py_native_library(
+    name = "swsscommon",
+    native_so = "//:_swsscommon_shared",
+    native_py = ":swsscommon_py_gen",
+    cc_deps = [
+        ":runtime_solibs",
+        # apt-sourced dynamic libs (hiredis, zmq, uuid, ...) reach here
+        # transitively through the extension's cc_library CcInfo.
+        "//:_swsscommon",
+    ],
+)
